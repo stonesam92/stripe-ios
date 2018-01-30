@@ -16,6 +16,10 @@ static NSString *const apiKey = @"pk_test_vOo1umqsYxSrP5UXfOeL3ecm";
 
 @end
 
+@interface STPAPIClient (WritableURL)
+@property (nonatomic, readwrite) NSURL *apiURL;
+@end
+
 @implementation STPSourceFunctionalTest
 
 - (void)testCreateSource_bancontact {
@@ -293,6 +297,28 @@ static NSString *const apiKey = @"pk_test_vOo1umqsYxSrP5UXfOeL3ecm";
     }];
 
     [self waitForExpectationsWithTimeout:5.0f handler:nil];
+}
+
+- (void)testCreateSourceVisaCheckout {
+    STPSourceParams *params = [STPSourceParams visaCheckoutParamsWithCallId:@"7625560819570122501"];
+    STPAPIClient *client = [[STPAPIClient alloc] initWithPublishableKey:@"pk_test_ILruLBeVAXDDtu4OKwijsMEW"];
+    client.apiURL = [NSURL URLWithString:@"https://qa-api.stripe.com/v1"];
+
+    XCTestExpectation *sourceExp = [self expectationWithDescription:@"VCO source created"];
+    [client createSourceWithParams:params completion:^(STPSource * _Nullable source, NSError * _Nullable error) {
+        [sourceExp fulfill];
+
+        XCTAssertNil(error);
+        XCTAssertNotNil(source);
+        XCTAssertEqual(source.type, STPSourceTypeCard);
+        XCTAssertEqual(source.flow, STPSourceFlowNone);
+        XCTAssertEqual(source.status, STPSourceStatusChargeable);
+        XCTAssertEqual(source.usage, STPSourceUsageReusable);
+        XCTAssertTrue([source.stripeID hasPrefix:@"src_"]);
+        NSLog(@"Created a VCO source %@", source.stripeID);
+    }];
+
+    [self waitForExpectationsWithTimeout:10.0 handler:nil];
 }
 
 - (void)testCreateSource_alipay {
